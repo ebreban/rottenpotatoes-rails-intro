@@ -8,14 +8,16 @@ class MoviesController < ApplicationController
 
   def index
     #@movies = Movie.all
+    update_session_hash
+    render_or_redirect
+    determine_hilighting
     @all_ratings = Movie.all_ratings
-    session[:ratings] = params[:ratings] || all_hash
+    #session[:ratings] = params[:ratings] || all_hash
     @selected_ratings = selected_ratings
     @selected_ratings_hash = selected_ratings_hash
     @sort = sort
-    determine_highlighting
     @movies = Movie.filter_and_sort(@selected_ratings, @sort)
-    
+ 
   end
 
   def new
@@ -52,21 +54,37 @@ class MoviesController < ApplicationController
   def movie_params
     params.require(:movie).permit(:title, :rating, :description, :release_date)
   end
+ 
   def selected_ratings
-    session[:ratings]&.keys
+    session[:ratings]&.keys  
   end
+ 
   def all_hash
-    Hash[Movie.all_ratings.map{|rating| [rating, "1"]}]
+    Hash[Movie.all_ratings.map{|rating| [rating,"1"]}]
   end
+ 
   def selected_ratings_hash
     session[:ratings]
   end
+ 
   def sort
-    params[:sort] || "id"
+    session[:sort]
   end
-  def determine_highlighting
-    @header_hilite = {:title=>"", :release_date=>"", :id=>""}
-    @header_hilite[@sort] = "bg-warning hilite"
+ 
+  def determine_hilighting
+    @header_hilite = {:title=>"",:release_date=>"",:id=>""}
+    @header_hilite[sort] = "bg-warning hilite"
+  end
+ 
+  def update_session_hash
+    session[:ratings] = params[:ratings] || session[:ratings] || all_hash
+    session[:sort] = params[:sort] || session[:sort] || "id"
+  end
+ 
+  def render_or_redirect
+    return unless (session[:ratings] and params[:ratings].nil?) or
+                  (session[:sort] and params[:sort].nil?)
+    flash.keep
+    redirect_to movies_path(:ratings=>session[:ratings], :sort=>session[:sort])
   end
 end
-
